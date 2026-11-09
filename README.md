@@ -1,15 +1,15 @@
-# Snapmenu — screenshots from the Omarchy bar
+# Snapmenu — a screenshot menu for Omarchy
 
 ![Snapmenu's capture menu and action card with a made-up example shot](docs/menu-and-card.png)
 
 **Pick a region, window or screen; get a saved shot and a small action card.** Snapmenu
-is an [Omarchy](https://omarchy.org) 4.5 shell plugin: click its camera in the bar,
-choose a capture, then copy, annotate, share or delete the result. The screen freezes
-while you aim, and the menu stays out of the image.
+is an [Omarchy](https://omarchy.org) 4.5 screenshot plugin. Open it from the camera
+icon in your desktop panel, choose a capture, then copy, annotate, share or delete the
+result. The screen freezes while you aim, and the menu stays out of the image.
 
 Snapmenu uses `grim` for screenshots and hands **Annotate** to Omarchy's Omasnap editor.
 It does not replace Omasnap's own picker, scrolling capture, pins or editor. Snapmenu's
-extra is the bar menu, self-timer, previous-area shortcut, local history and
+extra is the quick capture menu, self-timer, previous-area shortcut, local history and
 after-capture card. **A capture does not change the clipboard by default**; press `C` on
 the card or enable automatic copying in Settings.
 
