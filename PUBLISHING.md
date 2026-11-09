@@ -19,7 +19,7 @@ listing decision rather than a security review.
 | Optional root preview, one of `preview.png` / `.jpg` / `.jpeg` / `.webp` / `.avif` | `preview.png` |
 
 The preview is processed automatically — no manual resizing or compression, up to
-50 MB and 40 megapixels. Ours is 1454×1138 and about 150 KB.
+50 MB and 40 megapixels. Ours is 1532×1138 and about 140 KB.
 
 ## Submitting it
 
