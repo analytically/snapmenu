@@ -72,14 +72,14 @@
         "type": "boolean",
         "label": "Open annotate tool",
         "defaultValue": false,
-        "description": "Hand every screenshot straight to tensaku instead of waiting for the card."
+        "description": "Open every screenshot straight in Omasnap's editor instead of showing the card."
       },
       {
         "key": "exportDir",
         "type": "string",
         "label": "Export folder",
         "defaultValue": "",
-        "description": "Where screenshots are saved. Empty follows $OMARCHY_SCREENSHOT_DIR, then the XDG Pictures directory."
+        "description": "Where screenshots are saved. Empty follows $SNAPMENU_DIR, then $OMASNAP_SCREENSHOT_DIR, then legacy $OMARCHY_SCREENSHOT_DIR, then the XDG Pictures/Screenshots directory."
       },
       {
         "key": "optimizeShots",

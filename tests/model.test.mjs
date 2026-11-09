@@ -1182,6 +1182,7 @@ test("history, result, settings and about row shapes", () => {
   assert.equal(result.some((row) => row.action === "copy-path"), false)
   assert.equal(result.find((row) => row.action === "copy").label, "Copy")
   assert.match(result.find((row) => row.action === "copy").detail, /path/)
+  assert.match(result.find((row) => row.action === "annotate").detail, /Omasnap/)
 
   const settings = Model.settingsRows({ delay: 3, exportDir: "" })
   // Grouped by what the setting is about, in the order the groups are read: what
@@ -1205,6 +1206,7 @@ test("history, result, settings and about row shapes", () => {
   assert.deepEqual(group("Capture").map((r) => r.id), ["delay", "showCursor", "glaze", "dim"])
   assert.deepEqual(group("After a capture").map((r) => r.id),
     ["copyToClipboard", "saveToDisk", "showResult", "openAnnotate"])
+  assert.match(settings.find((row) => row.id === "openAnnotate").detail, /Omasnap/)
   assert.deepEqual(group("Files").map((r) => r.id),
     ["exportDir", "optimizeShots", "confirmDelete", "cardWidth", "deleteMode"])
 

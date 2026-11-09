@@ -40,13 +40,11 @@ Item {
   property string picturesDir: root.home + "/Pictures"
   // Where shots go when no export folder is configured: the same order the
   // capture helper uses.
-  readonly property string defaultShotDir: Quickshell.env("OMARCHY_SCREENSHOT_DIR")
-    || root.picturesDir
-  readonly property string shotDir: {
-    if (root.settings.exportDir) return root.settings.exportDir
-    var configured = Quickshell.env("OMARCHY_SCREENSHOT_DIR")
-    return configured ? configured : root.picturesDir
-  }
+  readonly property string defaultShotDir: Quickshell.env("SNAPMENU_DIR")
+    || Quickshell.env("OMASNAP_SCREENSHOT_DIR")
+    || Quickshell.env("OMARCHY_SCREENSHOT_DIR")
+    || root.picturesDir.replace(/\/$/, "") + "/Screenshots"
+  readonly property string shotDir: root.settings.exportDir || root.defaultShotDir
 
   property var settings: Model.normalizeSettings(null)
   property string shellConfigRaw: ""
@@ -599,7 +597,14 @@ Item {
     root.optimizeCandidate = temporary ? "" : result.path
     if (root.optimizeCandidate !== "") optimizeFallback.restart()
 
-    if (root.settings.openAnnotate) root.annotateFile(result.path)
+    if (root.settings.openAnnotate) {
+      // Omasnap opens its own fullscreen editor. Do not map our card over it or
+      // steal its keyboard focus when automatic annotation is enabled.
+      root.annotateFile(result.path)
+      root.setStage("menu")
+      root.opened = false
+      return
+    }
 
     if (root.settings.showResult) {
       root.currentFile = result.path
@@ -799,8 +804,7 @@ Item {
   function annotateFile(path) {
     if (!path) return
     root.claimTempShot(path)
-    Quickshell.execDetached([root.omarchyPath + "/bin/omarchy-launch-tui",
-      "/usr/bin/tensaku-edit", String(path)])
+    Quickshell.execDetached(["/usr/bin/omasnap", "--file", String(path)])
   }
 
   // A link out of the card, handed to the desktop's own opener. Nothing about the

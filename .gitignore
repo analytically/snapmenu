@@ -10,6 +10,9 @@
 *.log.*
 *.sig
 
+# Pi session artifacts, never package or deploy
+.pi/
+
 # Rust helper: build output and the compiled binary
 native/**/target/
 bin/snapmenu-clipboard

@@ -244,18 +244,23 @@ default_dir() {
     printf '%s' "$SNAPMENU_DIR"
     return
   fi
+  if [[ -n ${OMASNAP_SCREENSHOT_DIR:-} ]]; then
+    printf '%s' "$OMASNAP_SCREENSHOT_DIR"
+    return
+  fi
+  # The Omarchy screenshot wrapper still honours this legacy override.
   if [[ -n ${OMARCHY_SCREENSHOT_DIR:-} ]]; then
     printf '%s' "$OMARCHY_SCREENSHOT_DIR"
     return
   fi
 
-  local pictures=""
-  if [[ -f $HOME/.config/user-dirs.dirs ]]; then
-    pictures=$(sed -n 's/^XDG_PICTURES_DIR="\(.*\)"$/\1/p' "$HOME/.config/user-dirs.dirs" | head -n1)
+  local pictures="" user_dirs="${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs"
+  if [[ -f $user_dirs ]]; then
+    pictures=$(sed -n 's/^XDG_PICTURES_DIR="\(.*\)"$/\1/p' "$user_dirs" | head -n1)
     pictures="${pictures/\$HOME/$HOME}"
   fi
   [[ -n $pictures ]] || pictures="$HOME/Pictures"
-  printf '%s' "$pictures"
+  printf '%s/Screenshots' "${pictures%/}"
 }
 
 target_dir() {
@@ -476,7 +481,7 @@ if ((WANT_NO_ANIM)); then
     # Hyprland 0.56 and later read their config as Lua, where the legacy
     # `keyword layerrule …` form is refused; the Lua call is the supported way
     # to add a rule at runtime.
-    if [[ $("$HYPRCTL" eval 'hl.layer_rule({ name = "snapmenu", no_anim = true })' 2>&1) == "ok" ]]; then
+    if [[ $("$HYPRCTL" eval 'hl.layer_rule({ match = { namespace = "^snapmenu$" }, no_anim = true, animation = "none" })' 2>&1) == "ok" ]]; then
       applied=true
     elif "$HYPRCTL" keyword layerrule "noanim,snapmenu" >/dev/null 2>&1; then
       applied=true

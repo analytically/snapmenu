@@ -5,7 +5,7 @@ user-facing one.
 
 ## Requirements
 
-Omarchy Quattro, and `grim` (Omarchy ships it). Everything else is optional, and
+Omarchy 4.5, and `grim` (Omarchy ships it). Everything else is optional, and
 the plugin says which of it is missing rather than failing silently:
 
 | For | Needed | Without it |
@@ -14,7 +14,7 @@ the plugin says which of it is missing rather than failing silently:
 | Cropping a selection | `vips` (libvips), or `magick`/`convert`, or `ffmpeg` | grim reads the frozen frame back off the screen, which is exact but slower |
 | Clipboard as image **and** file | a Rust toolchain, then `make native` | `wl-copy --type image/png`, the image alone |
 | Removing a shot | `gio` (Omarchy ships it) | falls back to `rm` |
-| Annotate | `tensaku-edit` | the row is not offered |
+| Annotate | `omasnap` (Omarchy 4.5 ships it) | the editor hand-off cannot open |
 | Share | `omarchy-menu-share` | the row is not offered |
 
 The native clipboard helper is the only thing that needs building: Rust, linking
@@ -46,8 +46,10 @@ pick). Nothing in Snapmenu leaves a process behind, with one deliberate
 exception: the native clipboard helper stays alive until another client takes the
 selection, which is what keeps the image pasteable.
 
-Screenshots land in `$SNAPMENU_DIR`, else `$OMARCHY_SCREENSHOT_DIR`, else the XDG
-Pictures directory, named `screenshot-YYYY-MM-DD_HH-MM-SS.png`.
+Screenshots land in `$SNAPMENU_DIR`, else `$OMASNAP_SCREENSHOT_DIR`, else legacy
+`$OMARCHY_SCREENSHOT_DIR`, else XDG Pictures/Screenshots, named
+`screenshot-YYYY-MM-DD_HH-MM-SS.png`. A custom Omasnap INI output directory is
+not read; set Snapmenu's `exportDir` to the same path if desired.
 
 ## The two stages of a capture
 
@@ -67,7 +69,7 @@ make that invisible, and each of them is a bug if it regresses:
   `ionice -c3 nice -n 19`. Measured: three captures took 108 ms average with nothing else
   running and 106 ms with four passes going.
 - **It keeps the file's name and timestamp.** The rename is atomic, so the path on the
-  clipboard, the history listing, tensaku and a QML image that already loaded all keep
+  clipboard, the history listing, Omasnap and a QML image that already loaded all keep
   working. A shot deleted while the pass ran is not renamed back to life, and a pass that
   cannot do better leaves the file alone.
 

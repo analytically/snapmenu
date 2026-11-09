@@ -26,12 +26,12 @@ fi
 
 if command -v rsync >/dev/null 2>&1; then
   rsync -a --delete \
-    --exclude .git --exclude .github --exclude 'tests/manual' --exclude 'native' \
+    --exclude .git --exclude .github --exclude .pi --exclude 'tests/manual' --exclude 'native' \
     "$ROOT"/ "$TARGET"/
 else
   rm -rf "${TARGET:?}"/bin
   cp -a "$ROOT"/. "$TARGET"/
-  rm -rf "$TARGET"/.git
+  rm -rf "$TARGET"/.git "$TARGET"/.pi
 fi
 
 printf 'deployed %s -> %s\n' "$PLUGIN_ID" "$TARGET"

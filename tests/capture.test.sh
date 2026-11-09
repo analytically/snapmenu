@@ -249,6 +249,43 @@ case_cursor_is_left_out_by_default() {
   assert_contains "software cursors asked for" "$(cat "$CALLS/hyprctl.log")" "no_hardware_cursors = 1"
 }
 
+case_default_dir_follows_omasnap() {
+  new_case "saved shots use Omasnap's default folder and environment precedence"
+  write_monitor_fixture 1
+  stub_grim
+  stub_hyprctl 0
+  mkdir -p "$CASE/home" "$CASE/config"
+  local json
+  json=$(HOME="$CASE/home" XDG_CONFIG_HOME="$CASE/config" SNAPMENU_DIR='' \
+    OMASNAP_SCREENSHOT_DIR='' OMARCHY_SCREENSHOT_DIR='' run_capture --mode fullscreen)
+  assert_contains "default Pictures/Screenshots" "$(jq_str "$json" '.path')" \
+    "$CASE/home/Pictures/Screenshots/screenshot-"
+
+  printf 'XDG_PICTURES_DIR="$HOME/Photos"\n' >"$CASE/config/user-dirs.dirs"
+  json=$(HOME="$CASE/home" XDG_CONFIG_HOME="$CASE/config" SNAPMENU_DIR='' \
+    OMASNAP_SCREENSHOT_DIR='' OMARCHY_SCREENSHOT_DIR='' run_capture --mode fullscreen)
+  assert_contains "XDG pictures subfolder" "$(jq_str "$json" '.path')" \
+    "$CASE/home/Photos/Screenshots/screenshot-"
+
+  json=$(HOME="$CASE/home" XDG_CONFIG_HOME="$CASE/config" SNAPMENU_DIR='' \
+    OMASNAP_SCREENSHOT_DIR='' OMARCHY_SCREENSHOT_DIR="$CASE/legacy" \
+    run_capture --mode fullscreen)
+  assert_contains "legacy env still works" "$(jq_str "$json" '.path')" \
+    "$CASE/legacy/screenshot-"
+
+  json=$(HOME="$CASE/home" XDG_CONFIG_HOME="$CASE/config" SNAPMENU_DIR='' \
+    OMASNAP_SCREENSHOT_DIR="$CASE/omasnap" OMARCHY_SCREENSHOT_DIR="$CASE/legacy" \
+    run_capture --mode fullscreen)
+  assert_contains "Omasnap env wins over legacy" "$(jq_str "$json" '.path')" \
+    "$CASE/omasnap/screenshot-"
+
+  json=$(HOME="$CASE/home" XDG_CONFIG_HOME="$CASE/config" SNAPMENU_DIR="$CASE/snapmenu" \
+    OMASNAP_SCREENSHOT_DIR="$CASE/omasnap" OMARCHY_SCREENSHOT_DIR="$CASE/legacy" \
+    run_capture --mode fullscreen)
+  assert_contains "Snapmenu override wins" "$(jq_str "$json" '.path')" \
+    "$CASE/snapmenu/screenshot-"
+}
+
 case_no_anim_turns_off_the_layer_fade() {
   new_case "--no-anim stops our surfaces fading out"
   stub_hyprctl 0
@@ -262,7 +299,7 @@ case_no_anim_turns_off_the_layer_fade() {
   # this rule the compositor can still be drawing the card when the frame is
   # taken, which is the ghost the picker used to show.
   assert_contains "lua api used" "$(cat "$CALLS/hyprctl.log")" "hl.layer_rule"
-  assert_contains "our namespace named" "$(cat "$CALLS/hyprctl.log")" "snapmenu"
+  assert_contains "our namespace matched" "$(cat "$CALLS/hyprctl.log")" 'match = { namespace = "^snapmenu$" }'
   assert_contains "animation off" "$(cat "$CALLS/hyprctl.log")" "no_anim"
 }
 
@@ -900,6 +937,7 @@ case_freeze_reports_whether_cropping_is_exact
 case_freeze_waits_for_the_overlay_to_unmap
 case_freeze_settles_before_capturing
 case_freeze_settles_on_the_rectangle_it_is_given
+case_default_dir_follows_omasnap
 case_no_anim_turns_off_the_layer_fade
 case_no_anim_falls_back_to_the_keyword
 case_cursor_is_left_out_by_default

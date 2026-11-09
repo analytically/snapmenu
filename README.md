@@ -14,8 +14,8 @@ in the picture.
 2. **Choose what to capture**: drag an area, or just *click a window* and Snapmenu
    outlines exactly what it will take. The screen is frozen the moment the picker
    opens, so nothing moves or repaints under your drag.
-3. The shot is saved to your Pictures folder and the card appears. Press **`C`** to
-   put it on the clipboard, or pick **Annotate**, **Share…**, **Reveal in Files**
+3. The shot is saved to your Pictures/Screenshots folder and the card appears.
+   Press **`C`** to put it on the clipboard, or pick **Annotate**, **Share…**, **Reveal in Files**
    or **Delete**.
 4. **`Esc`** closes the card. The file stays where it is, and your clipboard is
    left exactly as you found it.
@@ -124,7 +124,7 @@ o.bind("SUPER + SHIFT + A", "omarchy-shell shell call io.github.analytically.sna
 | Key | Does |
 |---|---|
 | `C` | copy the image and its path |
-| `A` | annotate in tensaku |
+| `A` | annotate in Omasnap |
 | `S` | share with LocalSend |
 | `R` | reveal the shot in Files |
 | `X` | delete it (to the Trash, unless you say otherwise) |
@@ -136,8 +136,16 @@ the way: the card closes as soon as one of them runs.
 
 ## Where your shots go
 
-Your Pictures folder, named `screenshot-2026-10-13_14-41-02.png`, unless you
-pick somewhere else in Settings.
+Your XDG Pictures/Screenshots folder (normally `~/Pictures/Screenshots`), named
+`screenshot-2026-10-13_14-41-02.png`, unless you pick somewhere else in Settings.
+`SNAPMENU_DIR`, `OMASNAP_SCREENSHOT_DIR`, then the legacy
+`OMARCHY_SCREENSHOT_DIR` take precedence over that default. Omasnap's
+`~/.config/omasnap/omasnap.conf` output directory is separate: if you customized
+it there, set Snapmenu's **Export folder** to the same path.
+
+Upgrading from an older Snapmenu? Existing shots in the Pictures root stay there.
+To keep seeing them in Snapmenu history, set **Export folder** to that old folder;
+history lists the current export folder, not multiple folders.
 
 **Capture History** is simply that folder — the newest shots, with how long ago
 each was taken and how big it is. Deleting from there sends the file to the
@@ -159,9 +167,9 @@ Open **Settings…** in the menu, or edit this plugin's entry in
 | Key | Default | Meaning |
 |---|---|---|
 | `copyToClipboard` | `false` | Copy every shot to the clipboard as it is taken, image and path |
-| `saveToDisk` | `true` | Keep the shot in your Pictures folder; off writes a temporary file |
+| `saveToDisk` | `true` | Keep the shot in the export folder; off writes a temporary file |
 | `showResult` | `true` | Open the action card after a capture |
-| `openAnnotate` | `false` | Hand every shot straight to tensaku |
+| `openAnnotate` | `false` | Open every shot straight in Omasnap instead of showing the action card |
 | `exportDir` | `""` | Export folder; empty follows the Omarchy default |
 | `optimizeShots` | `5` | Re-compress saved shots: `0` (off), `5` (balanced) or `9` (smallest) |
 | `showCursor` | `false` | Draw the pointer into the screenshot |
