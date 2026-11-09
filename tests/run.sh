@@ -60,10 +60,10 @@ run_script_tests() { bash tests/capture.test.sh; }
 
 run_syntax() {
   local file status=0
-  for file in bin/*.sh tests/*.sh; do
+  for file in bin/*.sh tests/*.sh tests/manual/*.sh; do
     bash -n "$file" || status=1
   done
-  printf 'bash -n: %d script(s) clean\n' "$(ls bin/*.sh tests/*.sh | wc -l)"
+  printf 'bash -n: %d script(s) clean\n' "$(ls bin/*.sh tests/*.sh tests/manual/*.sh | wc -l)"
   return $status
 }
 
@@ -78,7 +78,7 @@ run_qmllint() {
 }
 
 run_shellcheck() {
-  shellcheck -S warning bin/*.sh tests/*.sh && printf 'shellcheck: clean\n'
+  shellcheck -S warning bin/*.sh tests/*.sh tests/manual/*.sh && printf 'shellcheck: clean\n'
 }
 
 rust_step() {

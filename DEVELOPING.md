@@ -164,6 +164,7 @@ started with and ignores its reply when they no longer match.
 | `tests/capture.test.sh` | every branch of `bin/snapmenu-capture.sh`: freeze geometry, logical→physical crop, negative origins, cropper fallback, clipboard import, trash/rm delete, file sizes, provenance, temp pruning and each failure reason | hermetic — every external tool is a stub reached through the `SNAPMENU_*` overrides, state lives in a temp dir |
 | `tests/model.test.mjs` | `SnapmenuModel.js`: row lists and their command payloads, parsing, settings lookup, cursor navigation, geometry math, the unified capture decision (`candidateRect` / `selectionOrDefault` / `legendText`), the release path, the named ratio levels and the bar icon's states | `node --test` |
 | `tests/run.sh` (`make test`) | the two suites above, plus `bash -n`, `shellcheck -S warning`, `qmllint` over every `.qml`, and `omarchy plugin validate` | one command, non-zero exit on any failure |
+| `tests/manual/omarchy45.sh` | Omasnap receives the chosen image from the `A` key; the card closes; automatic annotation opens a real, temporary capture without leaving a card up | drives the real shell and Omasnap, refuses to interrupt an existing Omasnap session, restores settings and removes its test shot |
 | `tests/manual/menu_dropdown.sh` | the bar dropdown: lifecycle, the rows and capture modes it offers, the timer row writing its setting, a capture row producing a shot and opening the card, the card taking keyboard focus, Esc closing the card, previous-area capture, deleting, and the bar icon following the state | drives the real dropdown and icon over IPC |
 | `tests/manual/keyboard_pick.sh`, `freeze_crop_identity.sh` | what no headless runner can reach: a mapped layer surface, real keyboard focus, the compositor | drive the running picker with `wtype`, then assert against `hyprctl`, `identify` and `compare` |
 
@@ -194,7 +195,7 @@ rather than a gesture belongs in the model with a test next to it.
 ```bash
 make test      # the gate: everything that must pass before a change ships
 make deploy    # make test, then copy into the plugin dir and restart the shell
-make manual    # the three checks that need a real session
+make manual    # the live checks that need a real session
 make native    # build the Rust clipboard helper into bin/
 ```
 

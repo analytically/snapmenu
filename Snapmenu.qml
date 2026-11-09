@@ -1703,13 +1703,22 @@ Item {
             root.stepShot("older")
             event.accepted = true
           } else if (event.key === Qt.Key_A && (root.stage === "result" || root.stage === "history")) {
-            root.annotateFile(root.activeFile())
+            if (root.activeFile()) {
+              root.annotateFile(root.activeFile())
+              root.afterHandoff()
+            }
             event.accepted = true
           } else if (event.key === Qt.Key_S && (root.stage === "result" || root.stage === "history")) {
-            root.shareFile(root.activeFile())
+            if (root.activeFile()) {
+              root.shareFile(root.activeFile())
+              root.afterHandoff()
+            }
             event.accepted = true
           } else if (event.key === Qt.Key_R && (root.stage === "result" || root.stage === "history")) {
-            root.revealFile(root.activeFile())
+            if (root.activeFile()) {
+              root.revealFile(root.activeFile())
+              root.afterHandoff()
+            }
             event.accepted = true
           } else if (event.key === Qt.Key_X && (root.stage === "result" || root.stage === "history")) {
             root.deleteActive()
