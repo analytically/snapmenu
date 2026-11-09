@@ -18,7 +18,7 @@ const source = readFileSync(join(here, "..", "SnapmenuModel.js"), "utf8")
 const EXPORTS = [
   "PLUGIN_ID", "VERSION", "ICON", "ICON_CODEPOINTS", "glyphForCodePoint", "DEFAULT_SETTINGS",
   "DELAY_CHOICES", "localPathFromUrl", "basename", "dirname", "formatBytes", "formatAge",
-  "formatDimensions", "shotDetail", "parseRecentShots", "parseCaptureResult", "parseRects", "parseGeometry",
+  "formatDimensions", "shotDetail", "parseRecentShots", "parseCaptureResult", "chooserResult", "parseRects", "parseGeometry",
   "candidateRect", "selectionOrDefault", "legendText", "toggleGlyph", "actionHandsOff", "reasonMessage",
   "xdgPicturesDir", "boolValue", "normalizeDelay", "normalizeSettings", "entryFromShellConfig", "settingsFromShellConfig",
   "delayLabel", "nextDelay", "normalizeGlaze", "glazeLabel", "nextGlaze", "GLAZE_CHOICES",
@@ -40,6 +40,12 @@ const EXPORTS = [
 const Model = new Function(
   source + "\nreturn {" + EXPORTS.join(",") + "};"
 )()
+
+test("about-screen version matches the marketplace manifest", () => {
+  const manifest = JSON.parse(readFileSync(join(here, "..", "manifest.json"), "utf8"))
+  assert.equal(Model.VERSION, manifest.version)
+  assert.equal(Model.VERSION, "0.3.0")
+})
 
 test("plugin identity is a valid, non-reserved id", () => {
   assert.equal(Model.PLUGIN_ID, "io.github.analytically.snapmenu")
@@ -164,6 +170,17 @@ test("parseCaptureResult reads the helper's JSON line", () => {
   assert.equal(noise.ok, false)
   assert.equal(noise.reason, "no-output")
   assert.equal(Model.parseCaptureResult("").reason, "no-output")
+})
+
+test("file chooser distinguishes selection, cancellation, timeout and failure", () => {
+  assert.deepEqual(Model.chooserResult(0, "  /tmp/a.png\n"),
+    { status: "selected", path: "/tmp/a.png" })
+  assert.deepEqual(Model.chooserResult(1, ""), { status: "cancelled", path: "" })
+  assert.deepEqual(Model.chooserResult(1, "/tmp/a.png\n"),
+    { status: "cancelled", path: "" })
+  assert.deepEqual(Model.chooserResult(0, ""), { status: "failed", path: "" })
+  assert.deepEqual(Model.chooserResult(2, ""), { status: "failed", path: "" })
+  assert.deepEqual(Model.chooserResult(-1, ""), { status: "failed", path: "" })
 })
 
 test("parseRects reads the snapping rectangles", () => {

@@ -95,6 +95,9 @@ Item {
   // Without it, dismissing a card left the freeze still running, and its reply mapped
   // the picker or re-opened the result card after the user had closed it.
   property int captureToken: 0
+  // A portal or external command can reply after the card has been dismissed or
+  // a different session has opened. Its result must not resurrect that session.
+  property int externalToken: 0
   // The rectangle a capture started from a popout must watch: the popout's own card
   // area, which the popup knows and passes along. Empty for other captures.
   property string settleArea: ""
@@ -197,6 +200,7 @@ Item {
       payload = {}
     }
 
+    root.externalToken += 1
     root.deleteConfirmOpen = false
     root.countingDown = false
     root.busy = false
@@ -247,6 +251,7 @@ Item {
     root.releaseTempShot()
     // Anything in flight belongs to a session the user has walked away from.
     root.captureToken += 1
+    root.externalToken += 1
     if (freezeProc.running) freezeProc.running = false
     if (rectsProc.running) rectsProc.running = false
     if (cropProc.running) cropProc.running = false
@@ -691,24 +696,29 @@ Item {
   }
 
   function startRecording() {
-    if (root.busy) return
+    if (root.busy || recordingProc.running) return
     root.busy = true
     root.opened = false
+    recordingProc.token = ++root.externalToken
     recordingProc.command = [root.omarchyPath + "/bin/omarchy-capture-screenrecording"]
     recordingProc.running = true
   }
 
   function stopRecording() {
-    if (root.busy) return
+    if (root.busy || recordingProc.running) return
     root.busy = true
+    root.opened = false
+    recordingProc.token = ++root.externalToken
     recordingProc.command = [root.omarchyPath + "/bin/omarchy-capture-screenrecording", "--stop-recording"]
     recordingProc.running = true
   }
 
   function openFromClipboard() {
-    if (root.busy) return
+    if (root.busy || clipboardProc.running) return
     root.busy = true
+    clipboardProc.fromOverlay = root.opened
     root.opened = false
+    clipboardProc.token = ++root.externalToken
     var args = ["--from-clipboard"]
     if (root.settings.exportDir) args = args.concat(["--dir", root.settings.exportDir])
     clipboardProc.command = ["/usr/bin/bash", root.captureScript].concat(args)
@@ -837,18 +847,26 @@ Item {
   }
 
   function pickFile() {
-    if (root.busy) return
+    if (root.busy || pickProc.running) return
     root.busy = true
     root.opened = false
+    pickProc.token = ++root.externalToken
+    pickProc.exited = false
+    pickProc.streamDone = false
+    pickProc.output = ""
     pickProc.command = [root.omarchyPath + "/bin/omarchy-file-select",
       "--title", "Snapmenu · Open image", "--extensions", "png jpg jpeg webp"]
     pickProc.running = true
   }
 
   function pickExportDir() {
-    if (root.busy) return
+    if (root.busy || dirProc.running) return
     root.busy = true
     root.opened = false
+    dirProc.token = ++root.externalToken
+    dirProc.exited = false
+    dirProc.streamDone = false
+    dirProc.output = ""
     dirProc.command = [root.omarchyPath + "/bin/omarchy-file-select",
       "--title", "Snapmenu · Export folder", "--directory"]
     dirProc.running = true
@@ -1262,18 +1280,27 @@ Item {
 
   Process {
     id: clipboardProc
+    property int token: 0
+    property bool fromOverlay: false
     stdout: StdioCollector {
       waitForEnd: true
-      onStreamFinished: root.handleClipboard(String(text || ""))
+      onStreamFinished: {
+        if (clipboardProc.token === root.externalToken)
+          root.handleClipboard(String(text || ""), clipboardProc.fromOverlay)
+      }
     }
   }
 
-  function handleClipboard(stdout) {
+  function handleClipboard(stdout, fromOverlay) {
       var result = Model.parseCaptureResult(stdout)
       root.busy = false
       if (!result.ok) {
-        root.setStage("menu")
-        root.opened = true
+        if (fromOverlay) {
+          root.setStage("menu")
+          root.opened = true
+        } else {
+          root.dismiss()
+        }
         root.notify(Model.reasonMessage(result.reason || "clipboard-failed"))
         return
       }
@@ -1290,10 +1317,10 @@ Item {
 
   Process {
     id: recordingProc
+    property int token: 0
     onExited: function () {
-      root.busy = false
-      root.opened = true
-      root.setStage("menu")
+      if (recordingProc.token !== root.externalToken) return
+      root.dismiss()
       if (!recordProc.running) recordProc.running = true
     }
   }
@@ -1374,36 +1401,72 @@ Item {
 
   Process {
     id: pickProc
+    property int token: 0
+    property bool exited: false
+    property bool streamDone: false
+    property int exitCode: -1
+    property string output: ""
+    // Process.onExited can precede the last stdout chunk. Wait for both signals
+    // so Cancel (1), portal failure (2), and a selected path (0) stay distinct.
+    function completeIfReady() {
+      if (!exited || !streamDone || token !== root.externalToken) return
+      var choice = Model.chooserResult(exitCode, output)
+      root.busy = false
+      if (choice.status !== "selected") {
+        root.dismiss()
+        if (choice.status === "failed") root.notify("Could not open image chooser")
+        return
+      }
+      root.currentFile = choice.path
+      root.currentWidth = 0
+      root.currentHeight = 0
+      root.currentTemporary = false
+      root.opened = true
+      root.setStage("result")
+      root.focusCard()
+    }
+    onExited: function (code) {
+      exitCode = code
+      exited = true
+      completeIfReady()
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        root.busy = false
-        root.opened = true
-        var picked = String(text || "").split("\n")[0].replace(/^\s+|\s+$/g, "")
-        if (!picked) {
-          root.setStage("menu")
-          return
-        }
-        root.currentFile = picked
-        root.currentWidth = 0
-        root.currentHeight = 0
-        root.currentTemporary = false
-        root.setStage("result")
-        root.focusCard()
+        pickProc.output = String(text || "")
+        pickProc.streamDone = true
+        pickProc.completeIfReady()
       }
     }
   }
 
   Process {
     id: dirProc
+    property int token: 0
+    property bool exited: false
+    property bool streamDone: false
+    property int exitCode: -1
+    property string output: ""
+    function completeIfReady() {
+      if (!exited || !streamDone || token !== root.externalToken) return
+      var choice = Model.chooserResult(exitCode, output)
+      root.busy = false
+      if (choice.status === "selected") root.persistSettings({ exportDir: choice.path })
+      root.opened = true
+      root.setStage("settings")
+      if (choice.status === "failed") root.notify("Could not open folder chooser")
+    }
+    onExited: function (code) {
+      exitCode = code
+      exited = true
+      completeIfReady()
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        root.busy = false
-        root.opened = true
-        root.setStage("settings")
-        var picked = String(text || "").split("\n")[0].replace(/^\s+|\s+$/g, "")
-        if (picked) root.persistSettings({ exportDir: picked })
+        dirProc.output = String(text || "")
+        dirProc.streamDone = true
+        dirProc.completeIfReady()
       }
     }
   }
@@ -2029,6 +2092,7 @@ Item {
     return JSON.stringify({
       stage: root.stage,
       currentFile: root.currentFile,
+      exportDir: root.settings.exportDir,
       opened: root.opened,
       busy: root.busy,
       countingDown: root.countingDown,

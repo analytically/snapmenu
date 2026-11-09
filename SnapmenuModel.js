@@ -6,7 +6,7 @@
 // (tests/model.test.mjs).
 
 var PLUGIN_ID = "io.github.analytically.snapmenu"
-var VERSION = "0.1.0"
+var VERSION = "0.3.0"
 
 // Every glyph below is verified present in JetBrainsMono Nerd Font, and the
 // ones Omarchy already uses for capture (0xF030, 0xF03D, 0xF0D11, 0xEA74,
@@ -378,6 +378,16 @@ function parseOptimizeResult(text) {
   out.saved = out.ok && parsed.saved === true
   out.savedBytes = out.saved && out.before > out.after ? out.before - out.after : 0
   return out
+}
+
+// omarchy-file-select prints a path only when the portal accepted it. Exit 1
+// means Cancel (or its unanswered-dialog timeout); exit 2 means the chooser
+// could not run. Do not turn either into an empty image path.
+function chooserResult(exitCode, text) {
+  var path = String(text || "").split("\n")[0].replace(/^\s+|\s+$/g, "")
+  if (exitCode === 0 && path) return { status: "selected", path: path }
+  if (exitCode === 1) return { status: "cancelled", path: "" }
+  return { status: "failed", path: "" }
 }
 
 function parseCaptureResult(text) {
