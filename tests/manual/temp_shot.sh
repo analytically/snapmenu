@@ -50,6 +50,7 @@ set_setting() { # key json_value
 # The settings under test are the user's, so they go back whatever happens.
 restore() {
   omarchy-shell shell hide "$PLUGIN_ID" >/dev/null 2>&1
+  [[ -z ${SAVED_FIXTURE:-} ]] || rm -f -- "$SAVED_FIXTURE"
   set_setting saveToDisk "${SAVE_WAS:-true}"
   set_setting copyToClipboard "${COPY_WAS:-false}"
 }
@@ -119,6 +120,8 @@ if command -v wtype >/dev/null 2>&1; then
   STAGE=$(capture_and_wait)
   check "a second Save-off capture reached the card" "$STAGE" "result"
   FILE=$(state | jq -r '.currentFile')
+  SAVED_FIXTURE=$(mktemp --suffix=.png)
+  cp -- "$FILE" "$SAVED_FIXTURE"
   wait_for_card_focus || true
   wtype -k c
   for _ in $(seq 1 20); do
@@ -129,6 +132,13 @@ if command -v wtype >/dev/null 2>&1; then
     "$([[ -f $FILE ]] && echo yes || echo no)" "no"
   check "and the image is on the clipboard" \
     "$(command -v wl-paste >/dev/null 2>&1 && wl-paste --list-types 2>/dev/null | grep -cx 'image/png')" "1"
+
+  printf 'copying another file with Save off never deletes that file\n'
+  omarchy-shell shell summon "$PLUGIN_ID" "$(jq -cn --arg path "$SAVED_FIXTURE" '{path:$path}')" >/dev/null
+  wait_for_card_focus || die "the saved-file card never took focus"
+  wtype -k c
+  sleep 0.4
+  check "the saved file survives Copy" "$([[ -f $SAVED_FIXTURE ]] && echo yes || echo no)" "yes"
   omarchy-shell shell hide "$PLUGIN_ID" >/dev/null 2>&1
 else
   printf '  skip  wtype is not installed, so the card cannot be driven by key\n'

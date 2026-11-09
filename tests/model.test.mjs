@@ -5,7 +5,9 @@
 // scope, then hand the exports back as an object.
 //
 //   node --test tests/
-import { readFileSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { dirname, join } from "node:path"
 import assert from "node:assert/strict"
@@ -31,7 +33,7 @@ const EXPORTS = [
   "dragConstraintLabel", "dragModeFor", "globalGeometry", "clipRectToBounds", "localRects", "rectAt",
   "rectArea", "windowRects", "nextRect", "rectLabel", "rowSelectable", "clampIndex",
   "firstEnabledIndex", "nearestEnabled", "nextEnabledIndex", "nthEnabledIndex", "stepShotRow", "shotAge",
-  "copyDetail",
+  "copyDetail", "copyRemovesTemp",
   "ratioLabel", "ratioName", "dimensionLabel",
   "RATIOS", "RATIO_TOLERANCE", "normalizeCardWidth", "cardWidthLabel", "nextCardWidth", "prevCardWidth",
   "dragCardWidth", "CARD_WIDTHS"
@@ -44,7 +46,7 @@ const Model = new Function(
 test("about-screen version matches the marketplace manifest", () => {
   const manifest = JSON.parse(readFileSync(join(here, "..", "manifest.json"), "utf8"))
   assert.equal(Model.VERSION, manifest.version)
-  assert.equal(Model.VERSION, "0.3.0")
+  assert.equal(Model.VERSION, "0.4.0")
 })
 
 test("plugin identity is a valid, non-reserved id", () => {
@@ -112,14 +114,12 @@ test("formatAge", () => {
   assert.match(Model.formatAge(now - 60 * 86_400_000, now), /^\d{4}-\d{2}-\d{2}$/)
 })
 
-test("parseRecentShots sorts newest first, limits, ignores junk", () => {
+test("parseRecentShots sorts JSON records newest first and ignores malformed output", () => {
   const stdout = [
-    "1700000000\t1024\t/home/me/Pictures/old.png",
-    "1700000500\t2048\t/home/me/Pictures/new.png",
-    "",
-    "not-a-shot",
-    "1700000100\t512\t/home/me/Pictures/middle.png"
-  ].join("\n")
+    { path: "/home/me/Pictures/old.png", mtime: 1700000000, size: 1024 },
+    { path: "/home/me/Pictures/new.png", mtime: 1700000500, size: 2048 },
+    { path: "/home/me/Pictures/middle.png", mtime: 1700000100, size: 512 }
+  ].map(JSON.stringify).join("\n") + "\nnot-a-shot\n"
 
   const all = Model.parseRecentShots(stdout, 0)
   assert.deepEqual(all.map((s) => s.name), ["new.png", "middle.png", "old.png"])
@@ -128,6 +128,33 @@ test("parseRecentShots sorts newest first, limits, ignores junk", () => {
 
   assert.equal(Model.parseRecentShots(stdout, 2).length, 2)
   assert.deepEqual(Model.parseRecentShots("", 5), [])
+  assert.deepEqual(Model.parseRecentShots('{"path":"x.png","size":-1,"mtime":1}', 5), [])
+})
+
+test("history listing cannot forge rows with control characters in filenames", () => {
+  const dir = mkdtempSync(join(tmpdir(), "snapmenu-history-"))
+  try {
+    const name = 'shot\n9999999999\t42\tsecret.png'
+    writeFileSync(join(dir, name), "test")
+    const stdout = execFileSync("/usr/bin/python3",
+      [join(here, "..", "bin", "snapmenu-list.py"), dir], { encoding: "utf8" })
+    const shots = Model.parseRecentShots(stdout, 24)
+    assert.equal(shots.length, 1)
+    assert.equal(shots[0].path, join(dir, name))
+    assert.ok(!shots.some((shot) => shot.path === "secret.png"))
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("Copy removes only the pending owned temporary shot", () => {
+  const owned = "/state/snapmenu/tmp/shot.png"
+  const saved = "/home/me/Pictures/Screenshots/old.png"
+  assert.equal(Model.copyRemovesTemp(owned, owned, false), true)
+  assert.equal(Model.copyRemovesTemp(saved, owned, false), false)
+  assert.equal(Model.copyRemovesTemp(saved, "", false), false)
+  assert.equal(Model.copyRemovesTemp(owned, owned, true), false)
+  assert.equal(Model.copyRemovesTemp("", "", false), false)
 })
 
 test("parseCaptureResult reads the helper's JSON line", () => {

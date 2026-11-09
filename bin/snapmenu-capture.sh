@@ -594,18 +594,20 @@ fi
 # ------------------------------------------------------------------ delete
 
 # `gio trash` first: a screenshot deleted by mistake should be recoverable from
-# the file manager's trash, and it still leaves the export folder either way, so
-# the capture history (which is that folder) drops it immediately. --permanently
-# skips that and unlinks the file; both report the same mode once the folder no
-# longer has it.
+# the file manager's trash. A failed Trash request must leave the shot intact:
+# only an explicit --permanently may unlink it.
 if [[ -n $DELETE ]]; then
   if [[ ! -e $DELETE ]]; then
     jq -cn --arg p "$DELETE" '{ok:true,path:$p,mode:"missing"}'
     exit 0
   fi
 
-  if ((PERMANENT == 0)) && [[ -x $GIO ]] && "$GIO" trash -- "$DELETE" 2>/dev/null; then
-    jq -cn --arg p "$DELETE" '{ok:true,path:$p,mode:"trash"}'
+  if ((PERMANENT == 0)); then
+    if [[ -x $GIO ]] && "$GIO" trash -- "$DELETE" 2>/dev/null; then
+      jq -cn --arg p "$DELETE" '{ok:true,path:$p,mode:"trash"}'
+    else
+      emit_fail delete-failed
+    fi
     exit 0
   fi
 

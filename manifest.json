@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.analytically.snapmenu",
   "name": "Snapmenu",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "Mathias Bogaert",
   "license": "MIT",
   "description": "Screenshot menu for Omarchy: capture area, previous area, window or screen with an optional self-timer, then copy, annotate, share, reveal or delete the shot from a quick access card, with a capture history tray.",

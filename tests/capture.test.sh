@@ -778,7 +778,7 @@ case_clipboard_prefers_png_and_reports_empty() {
 }
 
 case_delete_prefers_the_trash() {
-  new_case "--delete trashes when it can, removes when it cannot"
+  new_case "--delete trashes when it can"
   : >"$CASE/out/keep.png"
   stub_gio 0
   stub_rm 0
@@ -788,13 +788,23 @@ case_delete_prefers_the_trash() {
   assert_eq "mode" "$(jq_str "$json" '.mode')" "trash"
   assert_file_missing "rm not used" "$CALLS/rm.log"
 
-  new_case "--delete falls back to rm"
+  new_case "--delete leaves the shot intact when Trash fails"
   : >"$CASE/out/keep.png"
   stub_gio 1
   stub_rm 0
   json=$(run_capture --delete "$CASE/out/keep.png")
-  assert_eq "mode" "$(jq_str "$json" '.mode')" "delete"
-  assert_file_exists "rm was used" "$CALLS/rm.log"
+  assert_eq "ok" "$(jq_str "$json" '.ok')" "false"
+  assert_eq "reason" "$(jq_str "$json" '.reason')" "delete-failed"
+  assert_file_exists "shot remains" "$CASE/out/keep.png"
+  assert_file_missing "rm not used" "$CALLS/rm.log"
+
+  new_case "--delete leaves the shot intact when gio is missing"
+  : >"$CASE/out/keep.png"
+  stub_rm 0
+  json=$(SNAPMENU_GIO="$CASE/bin/absent" run_capture --delete "$CASE/out/keep.png")
+  assert_eq "reason" "$(jq_str "$json" '.reason')" "delete-failed"
+  assert_file_exists "shot remains" "$CASE/out/keep.png"
+  assert_file_missing "rm not used" "$CALLS/rm.log"
 
   new_case "--delete on a file that is already gone"
   stub_gio 0

@@ -78,10 +78,11 @@ running pass is niced to 19, the file ends up smaller than a level-1 copy of its
 same dimensions, and two shots in a row both get dealt with.
 
 History *is* the export folder: a listing of the newest PNGs there, so a shot that
-leaves the folder leaves the list, no matter who removed it. Delete uses `gio
-trash` when available and `rm` otherwise; a shot the plugin is throwing away (with
-`saveToDisk` off) is deleted rather than sent to the Trash, and the temp directory
-is pruned. Such a shot is `pendingTempShot` while the card holds it: the card's rows
+leaves the folder leaves the list, no matter who removed it. Its Python helper emits
+JSON lines so a filename containing a newline cannot forge another history row.
+Delete uses `gio trash`; if Trash fails, the saved shot stays put. Only an explicit
+permanent delete unlinks it. A shot the plugin is throwing away (with `saveToDisk`
+off) is deleted rather than sent to the Trash, and the temp directory is pruned. Such a shot is `pendingTempShot` while the card holds it: the card's rows
 work on a file that is still there, `claimTempShot` marks it as taken when one of
 them hands it off, and `releaseTempShot` is what removes it when the card closes
 without anything taking it.
@@ -98,6 +99,7 @@ without anything taking it.
 | `SnapmenuModel.js` | Pure logic: row lists, parsing, geometry, settings, navigation |
 | `BarWidget.qml` | The bar glyph, its state (camera / armed timer / recording), and the popup's lifecycle |
 | `bin/snapmenu-capture.sh` | Freeze, crop, rects, clipboard, delete, re-compress — one JSON line out |
+| `bin/snapmenu-list.py` | List history as filename-safe JSON records |
 | `native/snapmenu-clipboard` | The Rust clipboard helper |
 | `tests/model.test.mjs` | `node --test tests/` |
 
@@ -161,7 +163,7 @@ started with and ignores its reply when they no longer match.
 
 | Layer | Covers | How |
 |---|---|---|
-| `tests/capture.test.sh` | every branch of `bin/snapmenu-capture.sh`: freeze geometry, logical→physical crop, negative origins, cropper fallback, clipboard import, trash/rm delete, file sizes, provenance, temp pruning and each failure reason | hermetic — every external tool is a stub reached through the `SNAPMENU_*` overrides, state lives in a temp dir |
+| `tests/capture.test.sh` | every branch of `bin/snapmenu-capture.sh`: freeze geometry, logical→physical crop, negative origins, cropper fallback, clipboard import, safe Trash failure/permanent delete, file sizes, provenance, temp pruning and each failure reason | hermetic — every external tool is a stub reached through the `SNAPMENU_*` overrides, state lives in a temp dir |
 | `tests/model.test.mjs` | `SnapmenuModel.js`: row lists and their command payloads, parsing, settings lookup, cursor navigation, geometry math, the unified capture decision (`candidateRect` / `selectionOrDefault` / `legendText`), the release path, the named ratio levels and the bar icon's states | `node --test` |
 | `tests/run.sh` (`make test`) | the two suites above, plus `bash -n`, `shellcheck -S warning`, `qmllint` over every `.qml`, and `omarchy plugin validate` | one command, non-zero exit on any failure |
 | `tests/manual/omarchy45.sh` | Omasnap receives the chosen image from the `A` key; the card closes; automatic annotation opens a real, temporary capture without leaving a card up | drives the real shell and Omasnap, refuses to interrupt an existing Omasnap session, restores settings and removes its test shot |

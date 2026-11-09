@@ -79,7 +79,9 @@ re-verified:
 4. Open the [verification form](https://github.com/omacom/omarchy-plugin-marketplace/issues/new?template=verify-plugin.yml),
    choose **Verify and publish a newer upstream commit**, and give the existing
    plugin id (`io.github.analytically.snapmenu`), the repository root URL, and that
-   SHA.
+   SHA. If filing with `gh issue create` instead of the web form, put a **blank
+   line after `### Verification action`** before the selected value; the workflow
+   router requires that exact spacing.
 5. Validation and the baseline re-run against that commit. A maintainer approves,
    and the snapshot is replaced atomically; the superseded evidence stays in the
    registry's history.

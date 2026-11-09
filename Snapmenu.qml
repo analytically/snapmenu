@@ -221,6 +221,7 @@ Item {
 
     if (payload.path) {
       root.currentFile = String(payload.path)
+      root.currentTemporary = false
       root.setStage("result")
     } else if (payload.stage) {
       root.setStage(String(payload.stage))
@@ -249,6 +250,7 @@ Item {
     // released here was never the user's, so it does not go to the Trash. (A delete
     // already in flight wins: the temp folder is pruned on the next capture either way.)
     root.releaseTempShot()
+    root.currentTemporary = false
     // Anything in flight belongs to a session the user has walked away from.
     root.captureToken += 1
     root.externalToken += 1
@@ -585,6 +587,9 @@ Item {
     if (root.stage !== "settings") root.refreshShots()
 
     var temporary = result.temporary === true && !root.settings.saveToDisk
+    // Establish ownership before Copy: only a shot held in this field may be
+    // removed after copying. A history row or externally opened path never is.
+    root.pendingTempShot = temporary ? result.path : ""
     var copied = false
     if (root.settings.copyToClipboard) {
       copied = true
@@ -733,10 +738,12 @@ Item {
   // cannot do that — it keeps only the last --type — so the native helper owns
   // the selection instead (see native/, built by `make native`).
   function copyFile(path, removeAfter) {
+    var removeOwnedTemp = removeAfter === true
+      && Model.copyRemovesTemp(path, root.pendingTempShot, root.settings.saveToDisk)
     root.claimTempShot(path)
     if (root.clipboardBackend === "native") {
       var argv = [root.clipboardHelper, String(path)]
-      if (removeAfter) argv = argv.concat(["--temporary"])
+      if (removeOwnedTemp) argv = argv.concat(["--temporary"])
       Quickshell.execDetached(argv)
       return
     }
@@ -744,7 +751,7 @@ Item {
     // is removed once the copy has had time to read it.
     var fallback = ["/usr/bin/bash", "-c",
       "exec /usr/bin/wl-copy --type image/png < \"$1\"", "snapmenu-copy", String(path)]
-    if (removeAfter) root.runAction(fallback, function () { root.removeFile(path) })
+    if (removeOwnedTemp) root.runAction(fallback, function () { root.removeFile(path, true) })
     else root.runAction(fallback)
   }
 
@@ -754,7 +761,8 @@ Item {
     // A temporary shot (Save off) was never meant to stay: the copy is what it was for,
     // so the file goes once the helper has the selection — the same bargain the copy
     // struck at capture time. A shot from the history is the user's file, and stays.
-    root.copyFile(path, root.currentTemporary && !root.settings.saveToDisk)
+    root.copyFile(path, Model.copyRemovesTemp(path, root.pendingTempShot,
+      root.settings.saveToDisk))
     root.afterHandoff()
     root.notify("Copied " + Model.basename(path))
   }
@@ -774,9 +782,8 @@ Item {
   }
 
   function removeFile(path, permanently) {
-    // Deliberately removing the shot the card holds settles it: nothing is left for
-    // the card to release afterwards.
-    root.claimTempShot(path)
+    // Keep ownership of a temporary shot until deletion actually succeeds. A
+    // failed Trash/unlink must leave the card (and its cleanup) intact.
     // One delete at a time: the report names the path this process was started with,
     // and a second X press would otherwise make the first report name the second file.
     if (deleteProc.running) return
@@ -799,7 +806,8 @@ Item {
     var result = Model.parseCaptureResult(stdout)
     var target = root.deletingPath
     root.deletingPath = ""
-    if (root.currentFile === target) {
+    if (result.ok) root.claimTempShot(target)
+    if (result.ok && root.currentFile === target) {
       root.currentFile = ""
       // The card's subject is gone; an action list pointing at nothing is worse
       // than going back to where the shot was chosen from.
@@ -973,7 +981,11 @@ Item {
     else if (action === "settings") root.setStage("settings")
     else if (action === "about") root.setStage("about")
     else if (action === "menu") root.setStage("menu")
-    else if (action === "open-shot") { root.currentFile = path; root.setStage("result") }
+    else if (action === "open-shot") {
+      root.currentFile = path
+      root.currentTemporary = false
+      root.setStage("result")
+    }
     else if (action === "copy") root.copyCurrent()
     else if (action === "annotate") root.annotateFile(path)
     else if (action === "share") root.shareFile(path)
@@ -1327,8 +1339,7 @@ Item {
 
   Process {
     id: listProc
-    command: ["/usr/bin/find", root.shotDir, "-maxdepth", "1", "-type", "f",
-      "-name", "*.png", "-printf", "%T@\t%s\t%p\n"]
+    command: ["/usr/bin/python3", root.pluginDir + "/bin/snapmenu-list.py", root.shotDir]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {

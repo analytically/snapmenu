@@ -26,8 +26,8 @@ manual:
 	@tests/manual/file_picker_cancel.sh
 	@tests/manual/keyboard_pick.sh
 	@tests/manual/freeze_crop_identity.sh
-	@tests/manual/temp_shot.sh
-	@tests/manual/optimize.sh
+	@bash tests/manual/temp_shot.sh
+	@bash tests/manual/optimize.sh
 
 notes:
 	@printf '%s\n' \

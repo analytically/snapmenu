@@ -6,7 +6,7 @@
 // (tests/model.test.mjs).
 
 var PLUGIN_ID = "io.github.analytically.snapmenu"
-var VERSION = "0.3.0"
+var VERSION = "0.4.0"
 
 // Every glyph below is verified present in JetBrainsMono Nerd Font, and the
 // ones Omarchy already uses for capture (0xF030, 0xF03D, 0xF0D11, 0xEA74,
@@ -324,24 +324,20 @@ function shotDetail(shot, nowMs) {
 
 // --------------------------------------------------------------- parsing
 
-// `find -printf '%T@\t%s\t%p\n'` output -> newest-first shot records.
+// One JSON object per file from bin/snapmenu-list.py. Newlines and tabs in a
+// filename stay escaped within the JSON string; they cannot forge another row.
 function parseRecentShots(text, limit) {
   var lines = String(text || "").split("\n")
   var out = []
   for (var i = 0; i < lines.length; i++) {
-    var line = lines[i]
-    if (!line) continue
-    var first = line.indexOf("\t")
-    if (first < 0) continue
-    var second = line.indexOf("\t", first + 1)
-    if (second < 0) continue
-    var mtime = Number(line.slice(0, first))
-    var size = Number(line.slice(first + 1, second))
-    var path = line.slice(second + 1)
-    if (!path) continue
-    if (!isFinite(mtime)) mtime = 0
-    if (!isFinite(size)) size = 0
-    out.push({ path: path, name: basename(path), size: size, mtime: Math.round(mtime * 1000) })
+    var record
+    try { record = JSON.parse(lines[i]) } catch (e) { continue }
+    if (!record || typeof record.path !== "string" || !record.path) continue
+    var mtime = Number(record.mtime)
+    var size = Number(record.size)
+    if (!isFinite(mtime) || !isFinite(size) || size < 0) continue
+    out.push({ path: record.path, name: basename(record.path), size: size,
+      mtime: Math.round(mtime * 1000) })
   }
   out.sort(function (a, b) { return b.mtime - a.mtime })
   var max = Number(limit)
@@ -1114,6 +1110,14 @@ function shotAge(shots, path, nowMs) {
     }
   }
   return ""
+}
+
+// The file can be removed after Copy only when it is the temporary shot this
+// card still owns. A stale currentTemporary flag must never delete a saved
+// history shot or a path opened from elsewhere.
+function copyRemovesTemp(path, pendingTempShot, saveToDisk) {
+  return saveToDisk === false && String(path || "") !== ""
+    && String(path) === String(pendingTempShot || "")
 }
 
 // The clipboard backend is passed in because the row has to say what a copy will

@@ -17,8 +17,8 @@ the card or enable automatic copying in Settings.
 
 ### Requirements
 
-Omarchy 4.5 with Hyprland, Quickshell, `grim`, `jq` and `wl-clipboard`. Omasnap
-(included with Omarchy 4.5) opens the annotation editor. A cropper such as `vips`,
+Omarchy 4.5 with Hyprland, Quickshell, `grim`, `jq`, Python 3 and `wl-clipboard`.
+Omasnap (included with Omarchy 4.5) opens the annotation editor. A cropper such as `vips`,
 ImageMagick or `ffmpeg` makes exact frozen-frame crops faster; without one, Snapmenu
 falls back to `grim`. `wtype` is needed only for the interactive tests. The optional
 native clipboard helper requires Rust.
